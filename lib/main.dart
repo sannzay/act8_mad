@@ -1,6 +1,132 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
+class AppConstants {
+  static const Duration textFadeSlowDuration = Duration(seconds: 2);
+  static const Duration textFadeFastDuration = Duration(milliseconds: 800);
+  static const Duration imageFadeDuration = Duration(seconds: 3);
+  static const Duration imageRotationDuration = Duration(seconds: 2);
+  static const Duration manualToggleDuration = Duration(seconds: 1);
+  
+  static const double titleFontSize = 24.0;
+  static const double primaryTextFontSize = 32.0;
+  static const double secondaryTextFontSize = 28.0;
+  static const double descriptionFontSize = 16.0;
+  static const double instructionFontSize = 14.0;
+  static const double smallTextFontSize = 12.0;
+  
+  static const double imageSize = 100.0;
+  static const double iconSize = 50.0;
+  static const double pageIndicatorSize = 8.0;
+  static const double frameWidth = 3.0;
+  static const double borderRadius = 8.0;
+  static const double imageBorderRadius = 12.0;
+  
+  static const EdgeInsets containerPadding = EdgeInsets.all(16.0);
+  static const EdgeInsets framePadding = EdgeInsets.all(16.0);
+  static const EdgeInsets imageFramePadding = EdgeInsets.all(8.0);
+  
+  static const TextStyle titleTextStyle = TextStyle(
+    fontSize: titleFontSize,
+    fontWeight: FontWeight.bold,
+  );
+  
+  static const TextStyle descriptionTextStyle = TextStyle(
+    fontSize: descriptionFontSize,
+    color: Colors.grey,
+  );
+  
+  static const TextStyle instructionTextStyle = TextStyle(
+    fontSize: instructionFontSize,
+    color: Colors.grey,
+  );
+  
+  static const TextStyle smallTextStyle = TextStyle(
+    fontSize: smallTextFontSize,
+    color: Colors.grey,
+  );
+}
+
+class FrameContainer extends StatelessWidget {
+  final bool showFrame;
+  final Color frameColor;
+  final double borderRadius;
+  final EdgeInsets? padding;
+  final Widget child;
+
+  const FrameContainer({
+    super.key,
+    required this.showFrame,
+    required this.frameColor,
+    required this.child,
+    this.borderRadius = AppConstants.borderRadius,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: showFrame
+          ? BoxDecoration(
+              border: Border.all(color: frameColor, width: AppConstants.frameWidth),
+              borderRadius: BorderRadius.circular(borderRadius),
+            )
+          : null,
+      padding: showFrame ? (padding ?? AppConstants.framePadding) : null,
+      child: child,
+    );
+  }
+}
+
+class AnimatedTextContainer extends StatelessWidget {
+  final Animation<double> animation;
+  final bool isVisible;
+  final String text;
+  final Color textColor;
+  final double fontSize;
+  final Duration toggleDuration;
+  final Curve curve;
+  final VoidCallback onTap;
+
+  const AnimatedTextContainer({
+    super.key,
+    required this.animation,
+    required this.isVisible,
+    required this.text,
+    required this.textColor,
+    required this.fontSize,
+    required this.onTap,
+    this.toggleDuration = AppConstants.manualToggleDuration,
+    this.curve = Curves.easeInOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          return AnimatedOpacity(
+            opacity: isVisible ? animation.value : 0.0,
+            duration: toggleDuration,
+            curve: curve,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 void main() {
   runApp(
@@ -136,8 +262,8 @@ class _MainScreenState extends State<MainScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      height: 8,
-                      width: 8,
+                      height: AppConstants.pageIndicatorSize,
+                      width: AppConstants.pageIndicatorSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _currentPage == 0
@@ -147,8 +273,8 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      height: 8,
-                      width: 8,
+                      height: AppConstants.pageIndicatorSize,
+                      width: AppConstants.pageIndicatorSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _currentPage == 1
@@ -222,12 +348,12 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: AppConstants.textFadeSlowDuration,
       vsync: this,
     );
 
     _imageAnimationController = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: AppConstants.imageFadeDuration,
       vsync: this,
     );
 
@@ -280,7 +406,7 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
             children: [
               const Text(
                 'Animation 1',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: AppConstants.titleTextStyle,
               ),
               const SizedBox(height: 40),
               GestureDetector(
@@ -298,12 +424,12 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
                     builder: (context, child) {
                       return AnimatedOpacity(
                         opacity: _isVisible ? _fadeAnimation.value : 0.0,
-                        duration: const Duration(seconds: 1),
+                        duration: AppConstants.manualToggleDuration,
                         curve: Curves.easeInOut,
                         child: Text(
                           'Hello, Flutter!',
                           style: TextStyle(
-                            fontSize: 32,
+                            fontSize: AppConstants.primaryTextFontSize,
                             fontWeight: FontWeight.bold,
                             color: colorProvider.textColor,
                           ),
@@ -316,12 +442,12 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
               const SizedBox(height: 20),
               const Text(
                 'Duration: 2 seconds (Auto + Manual)',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: AppConstants.descriptionTextStyle,
               ),
               const SizedBox(height: 10),
               const Text(
                 'Tap text to toggle visibility',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: AppConstants.instructionTextStyle,
               ),
               const SizedBox(height: 30),
               GestureDetector(
@@ -339,13 +465,13 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
                     builder: (context, child) {
                       return AnimatedOpacity(
                         opacity: _imageVisible ? _imageFadeAnimation.value : 0.0,
-                        duration: const Duration(seconds: 1),
+                        duration: AppConstants.manualToggleDuration,
                         curve: Curves.easeInOut,
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppConstants.imageBorderRadius),
                           child: Container(
-                            width: 100,
-                            height: 100,
+                            width: AppConstants.imageSize,
+                            height: AppConstants.imageSize,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [Colors.blue, Colors.purple],
@@ -356,7 +482,7 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
                             child: const Center(
                               child: Icon(
                                 Icons.flutter_dash,
-                                size: 50,
+                                size: AppConstants.iconSize,
                                 color: Colors.white,
                               ),
                             ),
@@ -370,12 +496,12 @@ class _FadingTextScreen1State extends State<FadingTextScreen1>
               const SizedBox(height: 10),
               const Text(
                 'Fading Image (3s) - Tap to toggle',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: AppConstants.smallTextStyle,
               ),
               const SizedBox(height: 20),
               const Text(
                 'Swipe left for Animation 2 →',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: AppConstants.instructionTextStyle,
               ),
             ],
           ),
@@ -406,12 +532,12 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: AppConstants.textFadeFastDuration,
       vsync: this,
     );
 
     _rotationController = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: AppConstants.imageRotationDuration,
       vsync: this,
     );
 
@@ -458,7 +584,7 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
             children: [
               const Text(
                 'Animation 2',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: AppConstants.titleTextStyle,
               ),
               const SizedBox(height: 40),
               GestureDetector(
@@ -476,12 +602,12 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
                     builder: (context, child) {
                       return AnimatedOpacity(
                         opacity: _isVisible ? _fadeAnimation.value : 0.0,
-                        duration: const Duration(milliseconds: 800),
+                        duration: AppConstants.textFadeFastDuration,
                         curve: Curves.bounceInOut,
                         child: Text(
                           'Welcome to Flutter!',
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: AppConstants.secondaryTextFontSize,
                             fontWeight: FontWeight.bold,
                             color: colorProvider.textColor,
                           ),
@@ -494,12 +620,12 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
               const SizedBox(height: 20),
               const Text(
                 'Duration: 0.8 seconds (Bounce)',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: AppConstants.descriptionTextStyle,
               ),
               const SizedBox(height: 10),
               const Text(
                 'Tap text to toggle visibility',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: AppConstants.instructionTextStyle,
               ),
               const SizedBox(height: 30),
               Container(
@@ -514,9 +640,9 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
                   animation: _rotationAnimation,
                   builder: (context, child) {
                     return Transform.rotate(
-                      angle: _rotationAnimation.value * 2.0 * 3.14159,
+                      angle: _rotationAnimation.value * 2.0 * math.pi,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppConstants.imageBorderRadius),
                         child: Container(
                           width: 100,
                           height: 100,
@@ -543,12 +669,12 @@ class _FadingTextScreen2State extends State<FadingTextScreen2>
               const SizedBox(height: 10),
               const Text(
                 'Rotating Image (2s)',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: AppConstants.smallTextStyle,
               ),
               const SizedBox(height: 20),
               const Text(
                 '← Swipe right for Animation 1',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: AppConstants.instructionTextStyle,
               ),
             ],
           ),
