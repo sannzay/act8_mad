@@ -1,7 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ColorProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+class ThemeProvider extends ChangeNotifier {
+  bool _isDarkMode = false;
+
+  bool get isDarkMode => _isDarkMode;
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    notifyListeners();
+  }
+}
+
+class ColorProvider extends ChangeNotifier {
+  Color _textColor = Colors.blue;
+
+  Color get textColor => _textColor;
+
+  void changeColor(Color color) {
+    _textColor = color;
+    notifyListeners();
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -9,329 +41,519 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: FadingTextAnimation(),
-      debugShowCheckedModeBanner: false,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Fading Text Animation',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blue,
+              brightness: Brightness.light,
+            ),
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blue,
+              brightness: Brightness.dark,
+            ),
+          ),
+          themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const MainScreen(),
+        );
+      },
     );
   }
 }
 
-class FadingTextAnimation extends StatefulWidget {
-  const FadingTextAnimation({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<FadingTextAnimation> createState() => _FadingTextAnimationState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _FadingTextAnimationState extends State<FadingTextAnimation> {
-  bool _isTextVisible = true;
-  final TextEditingController _textController =
-      TextEditingController(text: 'Hello, Flutter!');
+class _MainScreenState extends State<MainScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  bool _showFrame = false;
+  bool _showImageFrame = false;
 
-  bool _isImageVisible = true; 
-  bool _isRotated = false; 
-  bool _frameOn = true; 
+  void _showColorPicker() {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
-  double _durationSeconds = 1.0;
-  Curve _selectedCurve = Curves.easeInOut;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pick a color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: colorProvider.textColor,
+              onColorChanged: (color) {
+                colorProvider.changeColor(color);
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-  final Map<String, Curve> _curvesMap = {
-    'easeInOut': Curves.easeInOut,
-    'linear': Curves.linear,
-    'easeIn': Curves.easeIn,
-    'easeOut': Curves.easeOut,
-    'bounceIn': Curves.bounceIn,
-    'elasticOut': Curves.elasticOut,
-  };
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
-  final String _imageUrl =
-      'https://flutter.dev/images/catalog-widget-placeholder.png';
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Fading Text Animation'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: Icon(
+              themeProvider.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round,
+            ),
+            onPressed: themeProvider.toggleTheme,
+          ),
+          IconButton(
+            icon: const Icon(Icons.palette),
+            onPressed: _showColorPicker,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 8,
+                      width: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentPage == 0
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 8,
+                      width: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentPage == 1
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SwitchListTile(
+                  title: const Text('Show Text Frame'),
+                  value: _showFrame,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _showFrame = value;
+                    });
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Show Image Frame'),
+                  value: _showImageFrame,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _showImageFrame = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (page) {
+                setState(() {
+                  _currentPage = page;
+                });
+              },
+              children: [
+                FadingTextScreen1(showFrame: _showFrame, showImageFrame: _showImageFrame),
+                FadingTextScreen2(showFrame: _showFrame, showImageFrame: _showImageFrame),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FadingTextScreen1 extends StatefulWidget {
+  final bool showFrame;
+  final bool showImageFrame;
+  const FadingTextScreen1({super.key, required this.showFrame, required this.showImageFrame});
+
+  @override
+  State<FadingTextScreen1> createState() => _FadingTextScreen1State();
+}
+
+class _FadingTextScreen1State extends State<FadingTextScreen1>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _imageAnimationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _imageFadeAnimation;
+  bool _isVisible = true;
+  bool _imageVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _imageAnimationController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _imageFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _imageAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.repeat(reverse: true);
+    _imageAnimationController.repeat(reverse: true);
+  }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _animationController.dispose();
+    _imageAnimationController.dispose();
     super.dispose();
   }
 
-  void _toggleTextVisibility() {
+  void toggleVisibility() {
     setState(() {
-      _isTextVisible = !_isTextVisible;
+      _isVisible = !_isVisible;
     });
   }
 
-  void _toggleImageVisibility() {
+  void toggleImageVisibility() {
     setState(() {
-      _isImageVisible = !_isImageVisible;
-    });
-  }
-
-  void _toggleRotation() {
-    setState(() {
-      _isRotated = !_isRotated;
-    });
-  }
-
-  void _toggleFrame(bool value) {
-    setState(() {
-      _frameOn = value;
-    });
-  }
-
-  void _setCurve(String key) {
-    setState(() {
-      _selectedCurve = _curvesMap[key] ?? Curves.easeInOut;
+      _imageVisible = !_imageVisible;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final Duration animationDuration =
-        Duration(milliseconds: (_durationSeconds * 1000).round());
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fading Text & Image Playground'),
-        actions: [
-          IconButton(
-            tooltip: 'Toggle text visibility',
-            icon: const Icon(Icons.text_fields),
-            onPressed: _toggleTextVisibility,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            AnimatedOpacity(
-              opacity: _isTextVisible ? 1.0 : 0.0,
-              duration: animationDuration,
-              curve: _selectedCurve,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  _textController.text,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
-                ),
+    return Consumer<ColorProvider>(
+      builder: (context, colorProvider, child) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Animation 1',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _textController,
-                      decoration: const InputDecoration(
-                        labelText: 'Text content',
-                        hintText: 'Type new text and press Update',
-                      ),
-                      onSubmitted: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text('Update Text'),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          onPressed: _toggleTextVisibility,
-                          icon: const Icon(Icons.visibility),
-                          label: const Text('Toggle Text'),
-                        ),
-                        const Spacer(),
-                        Text('Duration: ${_durationSeconds.toStringAsFixed(2)}s'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Text('Rounded image (frame ${_frameOn ? "ON" : "OFF"})'),
-            const SizedBox(height: 8),
-            AnimatedOpacity(
-              opacity: _isImageVisible ? 1.0 : 0.0,
-              duration: animationDuration,
-              curve: _selectedCurve,
-              child: AnimatedRotation(
-                turns: _isRotated ? 1.0 : 0.0,
-                duration: animationDuration,
-                curve: _selectedCurve,
+              const SizedBox(height: 40),
+              GestureDetector(
+                onTap: toggleVisibility,
                 child: Container(
-                  decoration: BoxDecoration(
-                    border: _frameOn
-                        ? Border.all(color: Colors.blueAccent, width: 4)
-                        : null,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.all(6),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      _imageUrl,
-                      width: 200,
-                      height: 200,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Text('Frame'),
-                        const SizedBox(width: 8),
-                        Switch(
-                          value: _frameOn,
-                          onChanged: _toggleFrame,
-                        ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: _toggleImageVisibility,
-                          child: const Text('Toggle Image Fade'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _toggleRotation,
-                          child: const Text('Toggle Rotate'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Text('Rotate animation:'),
-                        const SizedBox(width: 8),
-                        Text(_isRotated ? '1 turn' : '0 turns'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Text('Duration'),
-                        Expanded(
-                          child: Slider(
-                            min: 0.1,
-                            max: 3.0,
-                            divisions: 29,
-                            value: _durationSeconds,
-                            onChanged: (v) {
-                              setState(() {
-                                _durationSeconds = v;
-                              });
-                            },
+                  decoration: widget.showFrame
+                      ? BoxDecoration(
+                    border: Border.all(color: Colors.blue, width: 3),
+                    borderRadius: BorderRadius.circular(8),
+                  )
+                      : null,
+                  padding: widget.showFrame ? const EdgeInsets.all(16) : null,
+                  child: AnimatedBuilder(
+                    animation: _fadeAnimation,
+                    builder: (context, child) {
+                      return AnimatedOpacity(
+                        opacity: _isVisible ? _fadeAnimation.value : 0.0,
+                        duration: const Duration(seconds: 1),
+                        curve: Curves.easeInOut,
+                        child: Text(
+                          'Hello, Flutter!',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: colorProvider.textColor,
                           ),
                         ),
-                        Text('${_durationSeconds.toStringAsFixed(2)}s'),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        const Text('Curve:'),
-                        const SizedBox(width: 12),
-                        DropdownButton<String>(
-                          value: _curvesMap.entries
-                              .firstWhere((e) => e.value == _selectedCurve,
-                                  orElse: () => _curvesMap.entries.first)
-                              .key,
-                          items: _curvesMap.keys
-                              .map(
-                                (k) => DropdownMenuItem<String>(
-                                  value: k,
-                                  child: Text(k),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (selected) {
-                            if (selected != null) _setCurve(selected);
-                          },
-                        ),
-                        const Spacer(),
-                        Text('Selected: ${_curvesMap.entries.firstWhere((e) => e.value == _selectedCurve).key}'),
-                      ],
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Card(
-              margin: const EdgeInsets.only(bottom: 24),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    const Text('Extra interactive demo'),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _isTextVisible = !_isTextVisible;
-                              _isImageVisible = !_isImageVisible;
-                            });
-                          },
-                          icon: const Icon(Icons.flip),
-                          label: const Text('Flip Both'),
+              const SizedBox(height: 20),
+              const Text(
+                'Duration: 2 seconds (Auto + Manual)',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Tap text to toggle visibility',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              GestureDetector(
+                onTap: toggleImageVisibility,
+                child: Container(
+                  decoration: widget.showImageFrame
+                      ? BoxDecoration(
+                    border: Border.all(color: Colors.purple, width: 3),
+                    borderRadius: BorderRadius.circular(12),
+                  )
+                      : null,
+                  padding: widget.showImageFrame ? const EdgeInsets.all(8) : null,
+                  child: AnimatedBuilder(
+                    animation: _imageFadeAnimation,
+                    builder: (context, child) {
+                      return AnimatedOpacity(
+                        opacity: _imageVisible ? _imageFadeAnimation.value : 0.0,
+                        duration: const Duration(seconds: 1),
+                        curve: Curves.easeInOut,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.blue, Colors.purple],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.flutter_dash,
+                                size: 50,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _durationSeconds = 0.25;
-                            });
-                          },
-                          icon: const Icon(Icons.speed),
-                          label: const Text('Quick Pulse'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Try changing things to see the effects.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Toggle text',
-        onPressed: _toggleTextVisibility,
-        child: const Icon(Icons.play_arrow),
-      ),
+              const SizedBox(height: 10),
+              const Text(
+                'Fading Image (3s) - Tap to toggle',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Swipe left for Animation 2 →',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FadingTextScreen2 extends StatefulWidget {
+  final bool showFrame;
+  final bool showImageFrame;
+  const FadingTextScreen2({super.key, required this.showFrame, required this.showImageFrame});
+
+  @override
+  State<FadingTextScreen2> createState() => _FadingTextScreen2State();
+}
+
+class _FadingTextScreen2State extends State<FadingTextScreen2>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _rotationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _rotationAnimation;
+  bool _isVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.bounceInOut,
+    ));
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+
+    _animationController.repeat(reverse: true);
+    _rotationController.repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  void toggleVisibility() {
+    setState(() {
+      _isVisible = !_isVisible;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ColorProvider>(
+      builder: (context, colorProvider, child) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Animation 2',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 40),
+              GestureDetector(
+                onTap: toggleVisibility,
+                child: Container(
+                  decoration: widget.showFrame
+                      ? BoxDecoration(
+                    border: Border.all(color: Colors.green, width: 3),
+                    borderRadius: BorderRadius.circular(8),
+                  )
+                      : null,
+                  padding: widget.showFrame ? const EdgeInsets.all(16) : null,
+                  child: AnimatedBuilder(
+                    animation: _fadeAnimation,
+                    builder: (context, child) {
+                      return AnimatedOpacity(
+                        opacity: _isVisible ? _fadeAnimation.value : 0.0,
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.bounceInOut,
+                        child: Text(
+                          'Welcome to Flutter!',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: colorProvider.textColor,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Duration: 0.8 seconds (Bounce)',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Tap text to toggle visibility',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              Container(
+                decoration: widget.showImageFrame
+                    ? BoxDecoration(
+                  border: Border.all(color: Colors.orange, width: 3),
+                  borderRadius: BorderRadius.circular(12),
+                )
+                    : null,
+                padding: widget.showImageFrame ? const EdgeInsets.all(8) : null,
+                child: AnimatedBuilder(
+                  animation: _rotationAnimation,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _rotationAnimation.value * 2.0 * 3.14159,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.orange, Colors.red],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.refresh,
+                              size: 50,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Rotating Image (2s)',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '← Swipe right for Animation 1',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
